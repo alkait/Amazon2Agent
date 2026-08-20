@@ -680,6 +680,14 @@
         box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       }
       .toast.show { opacity: 1; }
+      .scraping { display: none; align-items: center; gap: 4px; color: #ff9900; font-size: 11px; }
+      .scraping.on { display: inline-flex; }
+      .spinner {
+        width: 10px; height: 10px; border-radius: 50%;
+        border: 2px solid rgba(255,153,0,0.3); border-top-color: #ff9900;
+        animation: amx-spin 0.8s linear infinite;
+      }
+      @keyframes amx-spin { to { transform: rotate(360deg); } }
     </style>
     <div class="panel" id="panel">
       <div class="panel-header">
@@ -698,6 +706,7 @@
     <div class="pill" id="pill">
       <span>🛒 Amazon2Agent</span>
       <span class="count" id="count">0</span>
+      <span class="scraping" id="scraping"><span class="spinner"></span><span id="scraping-count"></span></span>
     </div>
     <div class="toast" id="toast"></div>
   `;
@@ -975,6 +984,23 @@
 
     const items = project ? project.items : [];
     $("count").textContent = String(items.length);
+
+    // Scraping is global (one queue across all projects), so the pill's
+    // progress indicator counts unique pending ASINs everywhere, not just
+    // in the selected project.
+    const pendingAsins = new Set();
+    for (const p of data.projects) {
+      for (const i of p.items) {
+        if (i.scrape && i.scrape.status === "pending") pendingAsins.add(i.asin);
+      }
+    }
+    const scraping = $("scraping");
+    scraping.classList.toggle("on", pendingAsins.size > 0);
+    if (pendingAsins.size) {
+      scraping.title = `${pendingAsins.size} page${pendingAsins.size === 1 ? "" : "s"} still scraping`;
+      $("scraping-count").textContent = String(pendingAsins.size);
+    }
+
     if (!project) return;
     const list = $("list");
     if (!items.length) {
